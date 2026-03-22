@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: ent-est-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+    spec:
+      containers:
+        - name: chat-service
+          image: mehdiechchentili/ent-chat-service:latest
+          ports:
+            - containerPort: 8005
+          envFrom:
+            - configMapRef:
+                name: ent-config
+            - secretRef:
+                name: ent-secrets
+          readinessProbe:
+            httpGet:
+              path: /chat/health
+              port: 8005
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-service
+  namespace: ent-est-sale
+spec:
+  selector:
+    app: chat-service
+  ports:
+    - port: 8005
+      targetPort: 8005

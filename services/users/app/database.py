@@ -1,0 +1,34 @@
+from cassandra.cluster import Cluster
+import os
+
+CASSANDRA_HOST = os.getenv("CASSANDRA_HOST", "cassandra")
+CASSANDRA_PORT = int(os.getenv("CASSANDRA_PORT", 9042))
+
+_session = None
+
+def get_session():
+    global _session
+    if _session:
+        return _session
+
+    cluster = Cluster([CASSANDRA_HOST], port=CASSANDRA_PORT)
+    _session = cluster.connect()
+
+    _session.execute("""
+        CREATE KEYSPACE IF NOT EXISTS ent_users
+        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}
+    """)
+    _session.set_keyspace("ent_users")
+
+    _session.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id UUID PRIMARY KEY,
+            email TEXT,
+            username TEXT,
+            full_name TEXT,
+            role TEXT,
+            created_at TIMESTAMP
+        )
+    """)
+
+    return _session

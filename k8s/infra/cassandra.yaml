@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cassandra-pvc
+  namespace: ent-est-sale
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cassandra
+  namespace: ent-est-sale
+spec:
+  serviceName: cassandra-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cassandra
+  template:
+    metadata:
+      labels:
+        app: cassandra
+    spec:
+      containers:
+        - name: cassandra
+          image: cassandra:4.1
+          ports:
+            - containerPort: 9042
+          env:
+            - name: CASSANDRA_CLUSTER_NAME
+              value: "ent-cluster"
+            - name: CASSANDRA_DC
+              value: "dc1"
+            - name: CASSANDRA_RACK
+              value: "rack1"
+            - name: HEAP_NEWSIZE
+              value: "128M"
+            - name: MAX_HEAP_SIZE
+              value: "512M"
+          volumeMounts:
+            - name: cassandra-storage
+              mountPath: /var/lib/cassandra
+          readinessProbe:
+            exec:
+              command: ["/bin/bash", "-c", "nodetool status | grep UN"]
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["/bin/bash", "-c", "nodetool status"]
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            timeoutSeconds: 10
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+      volumes:
+        - name: cassandra-storage
+          persistentVolumeClaim:
+            claimName: cassandra-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cassandra-service
+  namespace: ent-est-sale
+spec:
+  selector:
+    app: cassandra
+  ports:
+    - port: 9042
+      targetPort: 9042
+  clusterIP: None

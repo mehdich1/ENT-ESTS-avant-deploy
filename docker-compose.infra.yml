@@ -1,0 +1,250 @@
+version: '3.8'
+
+services:
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=ent-cluster
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    networks:
+      - ent-network
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - ent-network
+
+  minio-init:
+    image: minio/mc
+    container_name: minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 ${MINIO_USER} ${MINIO_PASSWORD};
+      mc mb --ignore-existing local/courses-files;
+      mc mb --ignore-existing local/exams-files;
+      mc mb --ignore-existing local/devoirs-files;
+      mc anonymous set download local/courses-files;
+      mc anonymous set download local/exams-files;
+      mc anonymous set download local/devoirs-files;
+      echo 'Buckets créés';
+      "
+    networks:
+      - ent-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    networks:
+      - ent-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    command: start-dev --import-realm
+    volumes:
+      - ./services/auth/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    networks:
+      - ent-network
+
+  users-service:
+    build: ./services/users
+    container_name: users-service
+    ports:
+      - "8001:8001"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ent-est
+    depends_on:
+      - cassandra
+      - keycloak
+    networks:
+      - ent-network
+
+  courses-service:
+    build: ./services/courses
+    container_name: courses-service
+    ports:
+      - "8002:8002"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_PUBLIC_HOST=127.0.0.1:9000
+      - MINIO_HOST=minio:9000
+      - MINIO_USER=minioadmin
+      - MINIO_PASSWORD=minioadmin123
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ent-est
+    depends_on:
+      - cassandra
+      - minio
+      - rabbitmq
+      - keycloak
+    networks:
+      - ent-network
+
+  messaging-service:
+    build: ./services/messaging
+    container_name: messaging-service
+    ports:
+      - "8003:8003"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ent-est
+    depends_on:
+      - cassandra
+      - rabbitmq
+      - keycloak
+    networks:
+      - ent-network
+
+  calendar-service:
+    build: ./services/calendar
+    container_name: calendar-service
+    ports:
+      - "8004:8004"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ent-est
+    depends_on:
+      - cassandra
+      - rabbitmq
+      - keycloak
+    networks:
+      - ent-network
+
+  chat-service:
+    build: ./services/chat
+    container_name: chat-service
+    ports:
+      - "8005:8005"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ent-est
+    depends_on:
+      - cassandra
+      - keycloak
+    networks:
+      - ent-network
+
+  exams-service:
+    build: ./services/exams
+    container_name: exams-service
+    ports:
+      - "8006:8006"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - MINIO_HOST=minio:9000
+      - MINIO_USER=minioadmin
+      - MINIO_PASSWORD=minioadmin123
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ent-est
+    depends_on:
+      - cassandra
+      - minio
+      - rabbitmq
+      - keycloak
+    networks:
+      - ent-network
+
+  notifications-service:
+    build: ./services/notifications
+    container_name: notifications-service
+    ports:
+      - "8007:8007"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASSWORD}
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ent-est
+    depends_on:
+      - cassandra
+      - rabbitmq
+      - keycloak
+    networks:
+      - ent-network
+
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    ports:
+      - "80:80"
+    depends_on:
+      - users-service
+      - courses-service
+      - messaging-service
+      - calendar-service
+      - chat-service
+      - exams-service
+      - notifications-service
+    networks:
+      - ent-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+    networks:
+      - ent-network
+
+volumes:
+  cassandra_data:
+  minio_data:
+
+networks:
+  ent-network:
+    driver: bridge

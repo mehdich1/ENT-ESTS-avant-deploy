@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-service
+  namespace: ent-est-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications-service
+  template:
+    metadata:
+      labels:
+        app: notifications-service
+    spec:
+      containers:
+        - name: notifications-service
+          image: mehdiechchentili/ent-notifications-service:latest
+          ports:
+            - containerPort: 8007
+          envFrom:
+            - configMapRef:
+                name: ent-config
+            - secretRef:
+                name: ent-secrets
+          readinessProbe:
+            httpGet:
+              path: /notifications/health
+              port: 8007
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-service
+  namespace: ent-est-sale
+spec:
+  selector:
+    app: notifications-service
+  ports:
+    - port: 8007
+      targetPort: 8007

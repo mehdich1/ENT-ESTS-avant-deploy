@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-service
+  namespace: ent-est-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-service
+  template:
+    metadata:
+      labels:
+        app: calendar-service
+    spec:
+      containers:
+        - name: calendar-service
+          image: mehdiechchentili/ent-calendar-service:latest
+          ports:
+            - containerPort: 8004
+          envFrom:
+            - configMapRef:
+                name: ent-config
+            - secretRef:
+                name: ent-secrets
+          readinessProbe:
+            httpGet:
+              path: /calendar/health
+              port: 8004
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calendar-service
+  namespace: ent-est-sale
+spec:
+  selector:
+    app: calendar-service
+  ports:
+    - port: 8004
+      targetPort: 8004

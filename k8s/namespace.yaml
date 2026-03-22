@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ent-est-sale
+  labels:
+    project: ent-est-sale
+    version: "1.0"

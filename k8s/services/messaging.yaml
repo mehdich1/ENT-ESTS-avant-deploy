@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: messaging-service
+  namespace: ent-est-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: messaging-service
+  template:
+    metadata:
+      labels:
+        app: messaging-service
+    spec:
+      containers:
+        - name: messaging-service
+          image: mehdiechchentili/ent-messaging-service:latest
+          ports:
+            - containerPort: 8003
+          envFrom:
+            - configMapRef:
+                name: ent-config
+            - secretRef:
+                name: ent-secrets
+          readinessProbe:
+            httpGet:
+              path: /messages/health
+              port: 8003
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: messaging-service
+  namespace: ent-est-sale
+spec:
+  selector:
+    app: messaging-service
+  ports:
+    - port: 8003
+      targetPort: 8003

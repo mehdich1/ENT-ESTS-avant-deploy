@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exams-service
+  namespace: ent-est-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: exams-service
+  template:
+    metadata:
+      labels:
+        app: exams-service
+    spec:
+      containers:
+        - name: exams-service
+          image: mehdiechchentili/ent-exams-service:latest
+          ports:
+            - containerPort: 8006
+          envFrom:
+            - configMapRef:
+                name: ent-config
+            - secretRef:
+                name: ent-secrets
+          readinessProbe:
+            httpGet:
+              path: /exams/health
+              port: 8006
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: exams-service
+  namespace: ent-est-sale
+spec:
+  selector:
+    app: exams-service
+  ports:
+    - port: 8006
+      targetPort: 8006

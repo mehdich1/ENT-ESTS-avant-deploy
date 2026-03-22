@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: courses-service
+  namespace: ent-est-sale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: courses-service
+  template:
+    metadata:
+      labels:
+        app: courses-service
+    spec:
+      containers:
+        - name: courses-service
+          image: mehdiechchentili/ent-courses-service:latest
+          ports:
+            - containerPort: 8002
+          envFrom:
+            - configMapRef:
+                name: ent-config
+            - secretRef:
+                name: ent-secrets
+          readinessProbe:
+            httpGet:
+              path: /courses/health
+              port: 8002
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: courses-service
+  namespace: ent-est-sale
+spec:
+  selector:
+    app: courses-service
+  ports:
+    - port: 8002
+      targetPort: 8002
