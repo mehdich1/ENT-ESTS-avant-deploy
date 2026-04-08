@@ -1,6 +1,6 @@
 # ENT EST Salé — Espace Numérique de Travail
 
-> Projet de Fin d'Études — Licence Professionnelle  
+> Projet de Fin d'Études — Dipolome Universitaire de Techonologie  
 > École Supérieure de Technologie de Salé — Université Mohammed V de Rabat
 
 ---
@@ -94,7 +94,7 @@ L'ENT EST Salé est une plateforme numérique complète destinée à digitaliser
       ▼
 [Gateway Nginx :80]  ← Point d'entrée unique
       │
-      ├──► /api/users/         ──► [users-service        :8001]
+      ├──► /api/users/         ──► [users-service         :8001]
       ├──► /api/courses/       ──► [courses-service       :8002]
       ├──► /api/messages/      ──► [messaging-service     :8003]
       ├──► /api/calendar/      ──► [calendar-service      :8004]

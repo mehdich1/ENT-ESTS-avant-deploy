@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const HOST = window.location.hostname;
-const API_URL = `http://${HOST}`;
-const KEYCLOAK_URL = `http://${HOST}:8080`;
+const API_URL = `http://${HOST}:30080`;
+const KEYCLOAK_URL = `http://${HOST}:30808`;
 
 // ─── INSTANCE AXIOS ────────────────────────────────────────────
 const api = axios.create({ baseURL: API_URL });
@@ -125,20 +125,18 @@ export const downloadSubmission = (submissionId) => api.get(`/api/exams/submissi
 // ─── OLLAMA ────────────────────────────────────────────────────
 export const askOllama = async (message) => {
   try {
-    const response = await fetch(`http://${HOST}/api/ollama/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama3',
-        prompt: message,
-        stream: false,
-        system: 'Tu es un assistant académique de l\'EST Salé. Tu aides les étudiants et enseignants avec leurs questions académiques. Réponds en français de façon concise et utile.'
-      })
+    // On utilise l'instance 'api' (Axios) au lieu de 'fetch'
+    const response = await api.post('/api/ollama/api/generate', {
+      model: 'llama3',
+      prompt: message,
+      stream: false,
+      system: "Tu es un assistant académique de l'EST Salé. Tu aides les étudiants et enseignants avec leurs questions académiques. Réponds en français de façon concise et utile."
     });
-    if (!response.ok) throw new Error('Indisponible');
-    const data = await response.json();
-    return data.response;
-  } catch {
+    
+    // Axios met les données dans .data
+    return response.data.response; 
+  } catch (error) {
+    console.error("Erreur Ollama:", error);
     throw new Error('Service Ollama indisponible');
   }
 };

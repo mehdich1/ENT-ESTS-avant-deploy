@@ -16,6 +16,7 @@ spec:
       containers:
         - name: users-service
           image: mehdiechchentili/ent-users-service:latest
+          imagePullPolicy: Always   # ✅ IMPORTANT (force pull Docker Hub)
           ports:
             - containerPort: 8001
           envFrom:
@@ -42,6 +43,7 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "250m"
+
 ---
 apiVersion: v1
 kind: Service
